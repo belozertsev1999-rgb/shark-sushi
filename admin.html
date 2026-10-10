@@ -1,0 +1,1247 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shark Sushi — Админ-панель</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;700;900&family=Manrope:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  :root {
+    --bg:#0a0e14; --bg2:#121821; --card:#1a212e;
+    --accent:#ff5722; --accent2:#ff9800;
+    --text:#f5f7fa; --muted:#8b98ad;
+    --green:#22c55e; --red:#ef4444; --blue:#3b82f6;
+  }
+  body { font-family:'Manrope',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+  h1,h2,h3,h4 { font-family:'Unbounded',sans-serif; }
+
+  /* LOGIN */
+  .login-screen {
+    position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
+    background:radial-gradient(circle at 30% 30%,rgba(255,87,34,0.15),transparent 60%), var(--bg);
+    z-index:1000; padding:20px;
+  }
+  .login-box {
+    background:var(--card); padding:48px; border-radius:28px;
+    border:1px solid rgba(255,255,255,0.08); width:100%; max-width:420px;
+    box-shadow:0 20px 60px rgba(0,0,0,0.5); animation:fadeUp 0.6s ease;
+  }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(30px);} to{opacity:1;transform:translateY(0);} }
+  .logo {
+    font-family:'Unbounded'; font-weight:900; font-size:24px;
+    background:linear-gradient(135deg,#ff5722,#ff9800);
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+    text-align:center; margin-bottom:8px;
+  }
+  .login-box p.sub { text-align:center; color:var(--muted); margin-bottom:32px; font-size:14px; }
+  .field { margin-bottom:18px; }
+  .field label { display:block; margin-bottom:8px; font-size:13px; color:var(--muted); font-weight:600; }
+  .field input, .field select, .field textarea {
+    /* Красивое выпадающее меню */
+.field select option,
+select option {
+    background:#1a212e;
+    color:#f5f7fa;
+    padding:10px;
+}
+.field select option:checked,
+select option:checked {
+    background:linear-gradient(135deg,#ff5722,#ff9800);
+    color:#fff;
+}
+.field select option:hover,
+select option:hover {
+    background:#2a3444;
+    color:#fff;
+}
+/* Для Chrome/Edge — убираем светлую полосу при фокусе */
+select:focus option:checked {
+    background:linear-gradient(135deg,#ff5722,#ff9800) !important;
+    color:#fff !important;
+}
+  }
+  .field input:focus, .field select:focus, .field textarea:focus {
+    outline:none; border-color:var(--accent);
+    background:rgba(255,87,34,0.08); box-shadow:0 0 0 4px rgba(255,87,34,0.15);
+  }
+  .field textarea { resize:vertical; min-height:80px; }
+  .btn {
+    padding:14px 24px; border-radius:14px; border:none;
+    font-family:inherit; font-weight:800; font-size:15px;
+    cursor:pointer; transition:0.3s;
+    display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  }
+  .btn-primary {
+    background:linear-gradient(135deg,var(--accent),var(--accent2));
+    color:#fff; box-shadow:0 8px 24px rgba(255,87,34,0.4);
+  }
+  .btn-primary:hover { transform:translateY(-2px); box-shadow:0 12px 32px rgba(255,87,34,0.6); }
+  .btn-primary:disabled { opacity:0.5; cursor:not-allowed; transform:none; }
+  .btn-ghost { background:rgba(255,255,255,0.05); color:#fff; border:1px solid rgba(255,255,255,0.08); }
+  .btn-ghost:hover { background:rgba(255,255,255,0.1); }
+  .btn-block { width:100%; }
+  .error-msg { color:#ef4444; font-size:13px; margin-top:12px; text-align:center; min-height:18px; }
+
+  /* APP */
+  .app { display:none; }
+  .app.active { display:block; }
+  .topbar {
+    display:flex; justify-content:space-between; align-items:center;
+    padding:18px 32px; background:rgba(10,14,20,0.8);
+    backdrop-filter:blur(20px); border-bottom:1px solid rgba(255,255,255,0.05);
+    position:sticky; top:0; z-index:100;
+  }
+  .topbar .logo { font-size:20px; }
+  .topbar .user { display:flex; align-items:center; gap:12px; font-size:14px; color:var(--muted); }
+
+  .layout { display:grid; grid-template-columns:240px 1fr; min-height:calc(100vh - 70px); }
+  .sidebar { background:var(--bg2); border-right:1px solid rgba(255,255,255,0.05); padding:24px 16px; }
+  .nav-item {
+    display:flex; align-items:center; gap:12px;
+    padding:14px 16px; border-radius:14px;
+    color:var(--muted); cursor:pointer; font-weight:600;
+    transition:0.2s; margin-bottom:4px; font-size:15px;
+  }
+  .nav-item:hover { background:rgba(255,255,255,0.04); color:#fff; }
+  .nav-item.active {
+    background:linear-gradient(135deg,rgba(255,87,34,0.15),rgba(255,152,0,0.1));
+    color:var(--accent); border:1px solid rgba(255,87,34,0.2);
+  }
+  .nav-item .icon { font-size:18px; }
+
+  .content { padding:32px; max-width:1200px; }
+  .page { display:none; animation:fadeUp 0.4s ease; }
+  .page.active { display:block; }
+  .page h2 { font-size:28px; margin-bottom:8px; }
+  .page .sub { color:var(--muted); margin-bottom:28px; font-size:14px; }
+
+  .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:16px; margin-bottom:32px; }
+  .stat {
+    background:var(--card); padding:22px; border-radius:20px;
+    border:1px solid rgba(255,255,255,0.05); transition:0.3s;
+  }
+  .stat:hover { transform:translateY(-4px); border-color:rgba(255,87,34,0.3); }
+  .stat .lbl { color:var(--muted); font-size:13px; margin-bottom:8px; font-weight:600; }
+  .stat .val { font-family:'Unbounded'; font-size:28px; font-weight:900; }
+  .stat .val.accent { color:var(--accent); }
+  .stat .val.green  { color:var(--green); }
+  .stat .val.blue   { color:var(--blue); }
+
+  .toolbar { display:flex; gap:12px; margin-bottom:20px; flex-wrap:wrap; align-items:center; }
+  .toolbar .search {
+    flex:1; min-width:200px; padding:12px 18px; border-radius:14px;
+    background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.08);
+    color:#fff; font-family:inherit; font-size:14px;
+  }
+  .toolbar .search:focus { outline:none; border-color:var(--accent); }
+
+  .table-card { background:var(--card); border-radius:20px; overflow:hidden; border:1px solid rgba(255,255,255,0.05); }
+  .table-scroll { overflow-x:auto; }
+  table { width:100%; border-collapse:collapse; }
+  table th {
+    text-align:left; padding:16px 20px;
+    background:rgba(255,255,255,0.03);
+    font-size:12px; color:var(--muted); font-weight:700;
+    text-transform:uppercase; letter-spacing:0.5px;
+  }
+  table td { padding:16px 20px; border-top:1px solid rgba(255,255,255,0.05); font-size:14px; vertical-align:middle; }
+  table tr:hover td { background:rgba(255,255,255,0.02); }
+  table .actions { display:flex; gap:8px; justify-content:flex-end; }
+  .icon-btn {
+    width:34px; height:34px; border-radius:10px; border:none;
+    background:rgba(255,255,255,0.05); color:#fff;
+    cursor:pointer; transition:0.2s; font-size:14px;
+    display:inline-flex; align-items:center; justify-content:center;
+  }
+  .icon-btn:hover { background:var(--accent); }
+  .icon-btn.danger:hover { background:var(--red); }
+
+  .badge-status { display:inline-block; padding:5px 12px; border-radius:50px; font-size:12px; font-weight:700; }
+  .badge-status.new      { background:rgba(59,130,246,0.15); color:#60a5fa; }
+  .badge-status.cooking  { background:rgba(255,152,0,0.15);  color:#fbbf24; }
+  .badge-status.delivery { background:rgba(168,85,247,0.15); color:#c084fc; }
+  .badge-status.done     { background:rgba(34,197,94,0.15);  color:#4ade80; }
+  .badge-status.cancel   { background:rgba(239,68,68,0.15);  color:#f87171; }
+
+  .badge-tag {
+    display:inline-block; padding:4px 10px; border-radius:8px;
+    font-size:11px; font-weight:800;
+    background:linear-gradient(135deg,var(--accent),var(--accent2));
+    color:#fff;
+  }
+
+  .modal-overlay {
+    position:fixed; inset:0; background:rgba(0,0,0,0.7);
+    backdrop-filter:blur(6px); z-index:200;
+    display:none; align-items:center; justify-content:center; padding:20px;
+  }
+  .modal-overlay.open { display:flex; }
+  .modal {
+    background:var(--bg2); border-radius:24px;
+    border:1px solid rgba(255,255,255,0.08);
+    padding:32px; width:100%; max-width:520px;
+    max-height:90vh; overflow-y:auto;
+    animation:fadeUp 0.3s ease;
+    box-shadow:0 30px 80px rgba(0,0,0,0.6);
+  }
+  .modal h3 { margin-bottom:20px; font-size:22px; }
+  .modal-actions { display:flex; gap:12px; margin-top:24px; }
+  .modal-actions .btn { flex:1; }
+
+  .toast {
+    position:fixed; bottom:30px; right:30px;
+    background:linear-gradient(135deg,var(--accent),var(--accent2));
+    color:#fff; padding:16px 26px; border-radius:16px;
+    font-weight:700; z-index:500;
+    box-shadow:0 10px 40px rgba(255,87,34,0.5);
+    transform:translateY(120px); transition:0.4s; max-width:340px;
+  }
+  .toast.show { transform:translateY(0); }
+  .toast.error { background:linear-gradient(135deg,#ef4444,#dc2626); box-shadow:0 10px 40px rgba(239,68,68,0.5); }
+
+  .order-items { font-size:13px; color:var(--muted); }
+  .empty { padding:60px 20px; text-align:center; color:var(--muted); }
+  .empty .icon { font-size:48px; margin-bottom:12px; display:block; }
+/* ═══ Усиленные стили форм внутри модалки ═══ */
+.modal input[type="text"],
+.modal input[type="number"],
+.modal input[type="email"],
+.modal input[type="password"],
+.modal input[type="tel"],
+.modal input:not([type]),
+.modal select,
+.modal textarea {
+    width:100% !important;
+    padding:14px 16px !important;
+    border-radius:14px !important;
+    background:#0f1520 !important;
+    border:1px solid rgba(255,255,255,0.1) !important;
+    color:#fff !important;
+    font-family:'Manrope', sans-serif !important;
+    font-size:15px !important;
+    transition:0.25s !important;
+    outline:none !important;
+    -webkit-appearance:none !important;
+    appearance:none !important;
+    box-shadow:none !important;
+}
+.modal input:focus,
+.modal select:focus,
+.modal textarea:focus {
+    border-color:var(--accent) !important;
+    background:rgba(255,87,34,0.08) !important;
+    box-shadow:0 0 0 4px rgba(255,87,34,0.15) !important;
+}
+.modal textarea {
+    min-height:90px !important;
+    resize:vertical !important;
+    line-height:1.5 !important;
+}
+.modal input::placeholder,
+.modal textarea::placeholder {
+    color:rgba(255,255,255,0.25) !important;
+}
+
+/* Красивая стрелочка у select */
+.modal select {
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238b98ad' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>") !important;
+    background-repeat:no-repeat !important;
+    background-position:right 16px center !important;
+    background-color:#0f1520 !important;
+    padding-right:44px !important;
+    cursor:pointer !important;
+}
+.modal select option {
+    background:#1a212e;
+    color:#f5f7fa;
+}
+.modal select option:checked {
+    background:linear-gradient(135deg,#ff5722,#ff9800);
+    color:#fff;
+}
+
+/* Красивый чекбокс */
+.modal input[type="checkbox"] {
+    -webkit-appearance:none !important;
+    appearance:none !important;
+    width:22px !important;
+    height:22px !important;
+    min-width:22px !important;
+    border-radius:7px !important;
+    background:rgba(255,255,255,0.06) !important;
+    border:1.5px solid rgba(255,255,255,0.15) !important;
+    cursor:pointer !important;
+    position:relative !important;
+    padding:0 !important;
+    transition:0.2s !important;
+    flex-shrink:0 !important;
+}
+.modal input[type="checkbox"]:checked {
+    background:linear-gradient(135deg,#ff5722,#ff9800) !important;
+    border-color:transparent !important;
+    box-shadow:0 4px 12px rgba(255,87,34,0.4) !important;
+}
+.modal input[type="checkbox"]:checked::after {
+    content:'' !important;
+    position:absolute !important;
+    left:7px !important;
+    top:3px !important;
+    width:6px !important;
+    height:11px !important;
+    border:solid #fff !important;
+    border-width:0 2.5px 2.5px 0 !important;
+    transform:rotate(45deg) !important;
+}
+.modal input[type="checkbox"]:hover {
+    border-color:var(--accent) !important;
+}
+
+/* Метка лейбла чуть аккуратнее */
+.modal .field label {
+    display:block;
+    margin-bottom:8px;
+    font-size:12px;
+    color:var(--muted);
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:0.4px;
+}
+
+/* Превью фото — ровнее */
+.modal #photoPreviewWrap img {
+    max-width:100%;
+    max-height:200px;
+    border-radius:14px;
+    object-fit:cover;
+    border:1px solid rgba(255,255,255,0.08);
+}
+
+/* Кнопки загрузки/удаления фото — на всю ширину */
+.modal #photoPreviewWrap + input + div {
+    display:flex !important;
+    gap:10px !important;
+}
+  @media (max-width:768px) {
+    .layout { grid-template-columns:1fr; }
+    .sidebar { position:fixed; top:70px; left:0; bottom:0; width:240px; transform:translateX(-100%); transition:0.3s; z-index:99; }
+    .sidebar.open { transform:translateX(0); }
+    .content { padding:20px; }
+    .topbar { padding:14px 20px; }
+    table th, table td { padding:12px; }
+    .hide-mobile { display:none; }
+  }
+  /* ═══════════ КРАСИВЫЕ НАСТРОЙКИ ═══════════ */
+
+/* Форма настроек — сетка 2 колонки */
+#settingsForm {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px 22px;
+}
+#settingsForm .field { margin: 0; }
+#settingsForm .field.full { grid-column: 1 / -1; }
+
+/* Убиваем дефолтный вид всех полей внутри настроек */
+#settingsForm input,
+#settingsForm select,
+#settingsForm textarea,
+#settingsForm input:not([type]) {
+  width: 100% !important;
+  padding: 14px 16px !important;
+  border-radius: 14px !important;
+  background: #0f1520 !important;
+  background-color: #0f1520 !important;
+  border: 1px solid rgba(255,255,255,0.08) !important;
+  color: #fff !important;
+  font-family: 'Manrope', sans-serif !important;
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  transition: 0.25s !important;
+  outline: none !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  box-shadow: none !important;
+  color-scheme: dark;
+}
+#settingsForm input:hover,
+#settingsForm select:hover,
+#settingsForm textarea:hover {
+  border-color: rgba(255,255,255,0.15) !important;
+}
+#settingsForm input:focus,
+#settingsForm select:focus,
+#settingsForm textarea:focus {
+  border-color: #ff5722 !important;
+  background: rgba(255,87,34,0.08) !important;
+  background-color: rgba(15,21,32,1) !important;
+  box-shadow: 0 0 0 4px rgba(255,87,34,0.15) !important;
+}
+
+/* УБИВАЕМ АВТОЗАПОЛНЕНИЕ ХРОМА — жёлтый/белый фон */
+#settingsForm input:-webkit-autofill,
+#settingsForm input:-webkit-autofill:hover,
+#settingsForm input:-webkit-autofill:focus,
+#settingsForm input:-webkit-autofill:active {
+  -webkit-text-fill-color: #fff !important;
+  -webkit-box-shadow: 0 0 0 1000px #0f1520 inset !important;
+  box-shadow: 0 0 0 1000px #0f1520 inset !important;
+  transition: background-color 5000s ease-in-out 0s !important;
+  caret-color: #fff !important;
+}
+
+/* Лейблы полей — капсом, серым */
+#settingsForm label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Иконка слева от поля */
+#settingsForm .field { position: relative; }
+#settingsForm .field .ico {
+  position: absolute;
+  top: 41px;
+  left: 16px;
+  font-size: 16px;
+  opacity: 0.55;
+  pointer-events: none;
+}
+#settingsForm .field.with-ico input {
+  padding-left: 42px !important;
+}
+
+/* Кнопка сохранения — на всю ширину */
+#saveSettingsBtn {
+  grid-column: 1 / -1;
+  margin-top: 8px;
+  padding: 18px !important;
+  font-size: 16px !important;
+  border-radius: 16px !important;
+}
+
+/* Заголовок-подсказка сверху */
+.settings-hint {
+  grid-column: 1 / -1;
+  padding: 14px 18px;
+  border-radius: 14px;
+  background: rgba(255,87,34,0.06);
+  border: 1px solid rgba(255,87,34,0.15);
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 6px;
+  line-height: 1.5;
+}
+.settings-hint b { color: #fff; }
+
+@media (max-width: 768px) {
+  #settingsForm { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════ LOGIN ═══════════ -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-box">
+    <div class="logo">🦈 SHARK SUSHI</div>
+    <p class="sub">Вход в админ-панель</p>
+    <div class="field">
+      <label>Email</label>
+      <input type="email" id="loginEmail" placeholder="admin@shark.ru" autocomplete="email">
+    </div>
+    <div class="field">
+      <label>Пароль</label>
+      <input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <button class="btn btn-primary btn-block" id="loginBtn">Войти</button>
+    <div class="error-msg" id="loginError"></div>
+  </div>
+</div>
+
+<!-- ═══════════ APP ═══════════ -->
+<div class="app" id="app">
+  <div class="topbar">
+    <div style="display:flex; align-items:center; gap:16px;">
+      <button class="icon-btn" id="burgerBtn" style="display:none;">☰</button>
+      <div class="logo">🦈 SHARK SUSHI</div>
+    </div>
+    <div class="user">
+      <span id="userEmail"></span>
+      <button class="btn btn-ghost" id="logoutBtn" style="padding:8px 16px; font-size:13px;">Выйти</button>
+    </div>
+  </div>
+
+  <div class="layout">
+    <aside class="sidebar" id="sidebar">
+      <div class="nav-item active" data-page="orders"><span class="icon">📋</span> Заказы</div>
+      <div class="nav-item" data-page="products"><span class="icon">🍣</span> Меню</div>
+      <div class="nav-item" data-page="categories"><span class="icon">📂</span> Категории</div>
+      <div class="nav-item" data-page="banners"><span class="icon">🖼</span> Акции</div>
+      <div class="nav-item" data-page="promo"><span class="icon">🎁</span> Промокоды</div>
+      <div class="nav-item" data-page="settings"><span class="icon">⚙️</span> Настройки</div>
+    </aside>
+
+    <main class="content">
+      <!-- ORDERS -->
+      <div class="page active" id="page-orders">
+        <h2>Заказы</h2>
+        <p class="sub">Управляйте заказами: подтверждайте, меняйте статус</p>
+        <div class="stats" id="orderStats"></div>
+        <div class="table-card">
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Клиент</th>
+                  <th class="hide-mobile">Состав</th>
+                  <th>Сумма</th>
+                  <th>Статус</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="ordersBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- PRODUCTS -->
+      <div class="page" id="page-products">
+        <h2>Меню</h2>
+        <p class="sub">Добавляйте, редактируйте и скрывайте товары</p>
+        <div class="toolbar">
+          <input class="search" id="productSearch" placeholder="🔍 Поиск по названию...">
+          <button class="btn btn-primary" id="addProductBtn">+ Добавить товар</button>
+        </div>
+        <div class="table-card">
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th></th>
+                  <th>Название</th>
+                  <th class="hide-mobile">Категория</th>
+                  <th>Цена</th>
+                  <th>Статус</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="productsBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- CATEGORIES -->
+      <div class="page" id="page-categories">
+        <h2>Категории</h2>
+        <p class="sub">Разделы меню на сайте</p>
+        <div class="toolbar">
+          <button class="btn btn-primary" id="addCategoryBtn">+ Добавить категорию</button>
+        </div>
+        <div class="table-card">
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr><th>Название</th><th>Slug</th><th>Порядок</th><th></th></tr>
+              </thead>
+              <tbody id="categoriesBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+<!-- BANNERS -->
+<div class="page" id="page-banners">
+  <h2>Акции и баннеры</h2>
+  <p class="sub">Слайд-шоу на главной странице сайта</p>
+  <div class="toolbar">
+    <button class="btn btn-primary" id="addBannerBtn">+ Добавить баннер</button>
+  </div>
+  <div class="table-card">
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr><th></th><th>Заголовок</th><th class="hide-mobile">Ссылка</th><th>Статус</th><th></th></tr>
+        </thead>
+        <tbody id="bannersBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+      <!-- PROMO -->
+      <div class="page" id="page-promo">
+        <h2>Промокоды</h2>
+        <p class="sub">Скидки для клиентов</p>
+        <div class="toolbar">
+          <button class="btn btn-primary" id="addPromoBtn">+ Добавить промокод</button>
+        </div>
+        <div class="table-card">
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr><th>Код</th><th>Скидка</th><th>Мин. заказ</th><th>Статус</th><th></th></tr>
+              </thead>
+              <tbody id="promoBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- SETTINGS -->
+      <div class="page" id="page-settings">
+        <h2>Настройки сайта</h2>
+        <p class="sub">Телефон, адрес, часы работы и доставка</p>
+        <div class="table-card" style="padding:28px;">
+          <div id="settingsForm"></div>
+          <button class="btn btn-primary" id="saveSettingsBtn" style="margin-top:20px;">💾 Сохранить настройки</button>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal" id="modalContent"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// ═══════════════════════════════════════════════════════
+//   ⚠️ ЗАМЕНИТЕ НА СВОИ ЗНАЧЕНИЯ ИЗ SUPABASE
+// ═══════════════════════════════════════════════════════
+const SUPABASE_URL = 'https://jwhtjjglclldommhnrlf.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_caiJZqpbWlCN758v7jQUgA_UDL7DxbD';
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+let state = { products:[], categories:[], orders:[], promo:[], settings:{} };
+
+// ═══════════ УТИЛИТЫ ═══════════
+function toast(msg, isError) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (isError ? ' error' : '');
+  clearTimeout(t._t);
+  t._t = setTimeout(()=>t.classList.remove('show'), 2500);
+}
+function esc(s){ return String(s??'').replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function fmtMoney(n){ return new Intl.NumberFormat('ru-RU').format(n)+' ₽'; }
+function fmtDate(d){ return new Date(d).toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}); }
+
+// ═══════════ AUTH ═══════════
+const loginScreen = document.getElementById('loginScreen');
+const appEl = document.getElementById('app');
+
+document.getElementById('loginBtn').onclick = async () => {
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const errEl = document.getElementById('loginError');
+  errEl.textContent = '';
+  if (!email || !password) { errEl.textContent = 'Заполните все поля'; return; }
+  const btn = document.getElementById('loginBtn');
+  btn.disabled = true; btn.textContent = 'Вход...';
+  const { error } = await sb.auth.signInWithPassword({ email, password });
+  btn.disabled = false; btn.textContent = 'Войти';
+  if (error) { errEl.textContent = 'Неверный email или пароль'; return; }
+  startApp();
+};
+
+document.getElementById('loginPassword').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('loginBtn').click();
+});
+
+document.getElementById('logoutBtn').onclick = async () => {
+  await sb.auth.signOut();
+  location.reload();
+};
+
+async function checkSession() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) startApp();
+}
+
+function startApp() {
+  loginScreen.style.display = 'none';
+  appEl.classList.add('active');
+  if (window.innerWidth <= 768) document.getElementById('burgerBtn').style.display = 'flex';
+  sb.auth.getUser().then(({data})=>{
+    if (data.user) document.getElementById('userEmail').textContent = data.user.email;
+  });
+  loadAll();
+}
+
+document.getElementById('burgerBtn').onclick = () => {
+  document.getElementById('sidebar').classList.toggle('open');
+};
+
+// ═══════════ НАВИГАЦИЯ ═══════════
+document.querySelectorAll('.nav-item').forEach(n => {
+  n.onclick = () => {
+    document.querySelectorAll('.nav-item').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
+    n.classList.add('active');
+    document.getElementById('page-'+n.dataset.page).classList.add('active');
+    document.getElementById('sidebar').classList.remove('open');
+  };
+});
+
+// ═══════════ ЗАГРУЗКА ДАННЫХ ═══════════
+async function loadAll() {
+  await Promise.all([loadCategories(), loadProducts(), loadOrders(), loadPromo(), loadSettings(), loadBanners()]);
+}
+
+async function loadCategories() {
+  const { data, error } = await sb.from('categories').select('*').order('sort_order');
+  if (error) return toast('Ошибка категорий: '+error.message, 1);
+  state.categories = data||[];
+  renderCategories();
+}
+
+async function loadProducts() {
+  const { data, error } = await sb.from('products').select('*').order('sort_order');
+  if (error) return toast('Ошибка товаров: '+error.message, 1);
+  state.products = data||[];
+  renderProducts();
+}
+
+async function loadOrders() {
+  const { data, error } = await sb.from('orders').select('*').order('created_at', {ascending:false}).limit(200);
+  if (error) return toast('Ошибка заказов: '+error.message, 1);
+  state.orders = data||[];
+  renderOrders();
+}
+
+async function loadPromo() {
+  const { data, error } = await sb.from('promo_codes').select('*').order('created_at', {ascending:false});
+  if (error) return toast('Ошибка промокодов: '+error.message, 1);
+  state.promo = data||[];
+  renderPromo();
+}
+
+async function loadSettings() {
+  const { data, error } = await sb.from('settings').select('*');
+  if (error) return toast('Ошибка настроек: '+error.message, 1);
+  state.settings = Object.fromEntries((data||[]).map(r=>[r.key, r.value]));
+  renderSettings();
+}
+
+// ═══════════ ЗАКАЗЫ ═══════════
+function renderOrders() {
+  const statuses = { new:'Новый', cooking:'Готовится', delivery:'В доставке', done:'Выполнен', cancel:'Отменён' };
+  const total = state.orders.reduce((s,o)=> s + (o.status!=='cancel' ? o.total : 0), 0);
+  const today = state.orders.filter(o=> new Date(o.created_at).toDateString() === new Date().toDateString());
+  document.getElementById('orderStats').innerHTML = `
+    <div class="stat"><div class="lbl">Всего заказов</div><div class="val">${state.orders.length}</div></div>
+    <div class="stat"><div class="lbl">Сегодня</div><div class="val blue">${today.length}</div></div>
+    <div class="stat"><div class="lbl">Выручка</div><div class="val green">${fmtMoney(total)}</div></div>
+    <div class="stat"><div class="lbl">Новых</div><div class="val accent">${state.orders.filter(o=>o.status==='new').length}</div></div>
+  `;
+  const tb = document.getElementById('ordersBody');
+  if (!state.orders.length) { tb.innerHTML = `<tr><td colspan="6" class="empty"><span class="icon">📭</span>Заказов пока нет</td></tr>`; return; }
+  tb.innerHTML = state.orders.map(o => {
+    const items = (o.items||[]).map(i=>`${esc(i.name)} ×${i.qty}`).join(', ');
+    return `<tr>
+      <td><b>#${o.id}</b><br><small style="color:var(--muted)">${fmtDate(o.created_at)}</small></td>
+      <td>${esc(o.customer_name)}<br><small style="color:var(--muted)">${esc(o.phone)}</small></td>
+      <td class="hide-mobile order-items">${items || '—'}</td>
+      <td><b>${fmtMoney(o.total)}</b></td>
+      <td><span class="badge-status ${o.status}">${statuses[o.status]||o.status}</span></td>
+      <td><div class="actions">
+        <button class="icon-btn" onclick="openOrder(${o.id})">👁</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+
+window.openOrder = function(id) {
+  const o = state.orders.find(x=>x.id===id);
+  if (!o) return;
+  const items = (o.items||[]).map(i=>`<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.05)"><span>${esc(i.name)} ×${i.qty}</span><b>${fmtMoney(i.price*i.qty)}</b></div>`).join('');
+  openModal(`
+    <h3>Заказ #${o.id}</h3>
+    <div style="display:grid;gap:8px;margin-bottom:16px;font-size:14px;">
+      <div><b>Клиент:</b> ${esc(o.customer_name)}</div>
+      <div><b>Телефон:</b> ${esc(o.phone)}</div>
+      ${o.address ? `<div><b>Адрес:</b> ${esc(o.address)}</div>` : ''}
+      ${o.comment ? `<div><b>Комментарий:</b> ${esc(o.comment)}</div>` : ''}
+      <div><b>Оплата:</b> ${o.payment_method === 'cash' ? 'Наличными' : 'Картой'}</div>
+    </div>
+    <div style="background:rgba(255,255,255,0.03);padding:16px;border-radius:14px;margin-bottom:16px;">${items}</div>
+    <div style="display:flex;justify-content:space-between;font-size:18px;"><b>Итого:</b><b style="color:var(--accent)">${fmtMoney(o.total)}</b></div>
+    <div class="field" style="margin-top:20px;"><label>Статус заказа</label>
+      <select id="orderStatus">
+        <option value="new" ${o.status==='new'?'selected':''}>Новый</option>
+        <option value="cooking" ${o.status==='cooking'?'selected':''}>Готовится</option>
+        <option value="delivery" ${o.status==='delivery'?'selected':''}>В доставке</option>
+        <option value="done" ${o.status==='done'?'selected':''}>Выполнен</option>
+        <option value="cancel" ${o.status==='cancel'?'selected':''}>Отменён</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Закрыть</button>
+      <button class="btn btn-primary" onclick="saveOrderStatus(${o.id})">Сохранить</button>
+    </div>
+  `);
+};
+
+window.saveOrderStatus = async function(id) {
+  const status = document.getElementById('orderStatus').value;
+  const { error } = await sb.from('orders').update({status}).eq('id', id);
+  if (error) return toast('Ошибка: '+error.message, 1);
+  toast('Статус обновлён');
+  closeModal();
+  loadOrders();
+};
+
+// ═══════════ ТОВАРЫ ═══════════
+function renderProducts() {
+  const tb = document.getElementById('productsBody');
+  const search = (document.getElementById('productSearch').value||'').toLowerCase();
+  const list = state.products.filter(p => !search || p.name.toLowerCase().includes(search));
+  if (!list.length) { tb.innerHTML = `<tr><td colspan="6" class="empty"><span class="icon">🍣</span>Товаров нет</td></tr>`; return; }
+  tb.innerHTML = list.map(p => {
+    const cat = state.categories.find(c=>c.id===p.category_id);
+    return `<tr>
+      <td>${p.photo_url 
+  ? `<img src="${esc(p.photo_url)}" style="width:48px;height:48px;border-radius:10px;object-fit:cover;">` 
+  : `<span style="font-size:26px;">${esc(p.emoji||'🍣')}</span>`}</td>
+      <td><b>${esc(p.name)}</b>${p.badge ? ` <span class="badge-tag">${esc(p.badge)}</span>` : ''}<br><small style="color:var(--muted)">${esc(p.description||'')}</small></td>
+      <td class="hide-mobile">${cat ? esc(cat.name) : '—'}</td>
+      <td><b>${fmtMoney(p.price)}</b></td>
+      <td>${p.is_active ? '<span class="badge-status done">Активен</span>' : '<span class="badge-status cancel">Скрыт</span>'}</td>
+      <td><div class="actions">
+        <button class="icon-btn" title="Вкл/выкл" onclick="toggleProduct(${p.id}, ${!p.is_active})">${p.is_active?'🚫':'✅'}</button>
+        <button class="icon-btn" title="Изменить" onclick="editProduct(${p.id})">✏️</button>
+        <button class="icon-btn danger" title="Удалить" onclick="deleteProduct(${p.id})">🗑</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+
+document.getElementById('productSearch').oninput = renderProducts;
+
+window.toggleProduct = async (id, active) => {
+  const { error } = await sb.from('products').update({is_active:active}).eq('id', id);
+  if (error) return toast('Ошибка: '+error.message, 1);
+  toast(active?'Товар включён':'Товар скрыт');
+  loadProducts();
+};
+
+window.deleteProduct = async (id) => {
+  if (!confirm('Удалить товар?')) return;
+  const { error } = await sb.from('products').delete().eq('id', id);
+  if (error) return toast('Ошибка: '+error.message, 1);
+  toast('Товар удалён');
+  loadProducts();
+};
+
+document.getElementById('addProductBtn').onclick = () => editProduct(null);
+
+window.editProduct = function(id) {
+  const p = id ? state.products.find(x=>x.id===id) : { name:'', description:'', price:0, old_price:null, emoji:'🍣', badge:'', category_id: state.categories[0]?.id, is_active:true, sort_order:0, photo_url:'' };
+  const catOpts = state.categories.map(c=>`<option value="${c.id}" ${c.id===p.category_id?'selected':''}>${esc(c.name)}</option>`).join('');
+  openModal(`
+    <h3>${id?'Изменить':'Новый'} товар</h3>
+
+    <div class="field">
+      <label>Фото товара</label>
+      <div id="photoPreviewWrap" style="margin-bottom:10px; text-align:center;">
+        ${p.photo_url 
+          ? `<img id="photoPreview" src="${esc(p.photo_url)}" style="max-width:100%; max-height:200px; border-radius:14px; object-fit:cover;">` 
+          : `<div id="photoPreview" style="height:120px; border-radius:14px; background:rgba(255,255,255,0.03); border:1px dashed rgba(255,255,255,0.15); display:flex; align-items:center; justify-content:center; color:var(--muted); font-size:40px;">${esc(p.emoji||'🍣')}</div>`}
+      </div>
+      <input type="file" id="photoFile" accept="image/*" style="display:none;">
+      <input type="hidden" id="photoUrl" value="${esc(p.photo_url||'')}">
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button type="button" class="btn btn-ghost" onclick="document.getElementById('photoFile').click()" style="flex:1;">📷 Загрузить фото</button>
+        ${p.photo_url ? `<button type="button" class="btn btn-ghost" onclick="removePhoto()" style="background:rgba(239,68,68,0.15); color:#f87171;">🗑 Убрать</button>` : ''}
+      </div>
+      <div id="uploadStatus" style="font-size:13px; color:var(--muted); margin-top:8px; min-height:18px;"></div>
+    </div>
+
+    <div class="field"><label>Название</label><input id="pName" value="${esc(p.name)}" placeholder="Филадельфия"></div>
+    <div class="field"><label>Описание</label><textarea id="pDesc" placeholder="Лосось, сыр, огурец">${esc(p.description||'')}</textarea></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+      <div class="field"><label>Цена ₽</label><input id="pPrice" type="number" value="${p.price}" min="0"></div>
+      <div class="field"><label>Старая цена ₽</label><input id="pOldPrice" type="number" value="${p.old_price||''}" min="0"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+      <div class="field"><label>Эмодзи (если нет фото)</label><input id="pEmoji" value="${esc(p.emoji||'🍣')}" maxlength="4"></div>
+      <div class="field"><label>Метка (ХИТ, NEW)</label><input id="pBadge" value="${esc(p.badge||'')}" maxlength="20"></div>
+    </div>
+    <div class="field"><label>Категория</label><select id="pCat">${catOpts}</select></div>
+    <div class="field"><label>Порядок</label><input id="pOrder" type="number" value="${p.sort_order||0}"></div>
+    <label style="display:flex;align-items:center;gap:10px;cursor:pointer;color:var(--muted);font-size:14px;">
+      <input type="checkbox" id="pActive" ${p.is_active?'checked':''} style="width:auto;"> Показывать на сайте
+    </label>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Отмена</button>
+      <button class="btn btn-primary" onclick="saveProduct(${id||'null'})">Сохранить</button>
+    </div>
+  `);
+
+  // Обработчик выбора файла
+  document.getElementById('photoFile').onchange = async function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const status = document.getElementById('uploadStatus');
+    status.textContent = 'Загрузка...';
+    status.style.color = 'var(--muted)';
+
+    // Проверки
+    if (file.size > 5 * 1024 * 1024) {
+      status.textContent = '❌ Файл больше 5 МБ';
+      status.style.color = '#ef4444';
+      return;
+    }
+
+    const ext = file.name.split('.').pop().toLowerCase();
+    const fileName = `${Date.now()}-${Math.random().toString(36).slice(2,8)}.${ext}`;
+
+    const { error } = await sb.storage.from('product-photos').upload(fileName, file, {
+      cacheControl: '3600',
+      upsert: false
+    });
+
+    if (error) {
+      status.textContent = '❌ Ошибка: ' + error.message;
+      status.style.color = '#ef4444';
+      return;
+    }
+
+    const { data: urlData } = sb.storage.from('product-photos').getPublicUrl(fileName);
+    const publicUrl = urlData.publicUrl;
+
+    document.getElementById('photoUrl').value = publicUrl;
+    document.getElementById('photoPreviewWrap').innerHTML = `<img src="${publicUrl}" style="max-width:100%; max-height:200px; border-radius:14px; object-fit:cover;">`;
+    status.textContent = '✅ Фото загружено';
+    status.style.color = '#4ade80';
+  };
+};
+
+// Удаление фото из формы (не из Storage)
+window.removePhoto = function() {
+  document.getElementById('photoUrl').value = '';
+  document.getElementById('photoPreviewWrap').innerHTML = `<div style="height:120px; border-radius:14px; background:rgba(255,255,255,0.03); border:1px dashed rgba(255,255,255,0.15); display:flex; align-items:center; justify-content:center; color:var(--muted); font-size:40px;">🍣</div>`;
+  document.getElementById('uploadStatus').textContent = 'Фото убрано (сохрани товар, чтобы применить)';
+};
+
+window.saveProduct = async function(id) {
+  const payload = {
+    name: document.getElementById('pName').value.trim(),
+    description: document.getElementById('pDesc').value.trim(),
+    price: +document.getElementById('pPrice').value || 0,
+    old_price: +document.getElementById('pOldPrice').value || null,
+    emoji: document.getElementById('pEmoji').value || '🍣',
+    badge: document.getElementById('pBadge').value.trim() || null,
+    category_id: +document.getElementById('pCat').value,
+    sort_order: +document.getElementById('pOrder').value || 0,
+    is_active: document.getElementById('pActive').checked,
+    photo_url: document.getElementById('photoUrl').value || null,
+  };
+  if (!payload.name) return toast('Введите название', 1);
+  const { error } = id
+    ? await sb.from('products').update(payload).eq('id', id)
+    : await sb.from('products').insert(payload);
+  if (error) return toast('Ошибка: '+error.message, 1);
+  toast(id?'Товар обновлён':'Товар добавлен');
+  closeModal();
+  loadProducts();
+};
+
+// ═══════════ КАТЕГОРИИ ═══════════
+function renderCategories() {
+  const tb = document.getElementById('categoriesBody');
+  if (!state.categories.length) { tb.innerHTML = `<tr><td colspan="4" class="empty">Нет категорий</td></tr>`; return; }
+  tb.innerHTML = state.categories.map(c => `<tr>
+    <td><b>${esc(c.name)}</b></td>
+    <td>${esc(c.slug)}</td>
+    <td>${c.sort_order}</td>
+    <td><div class="actions">
+      <button class="icon-btn" onclick="editCategory(${c.id})">✏️</button>
+      <button class="icon-btn danger" onclick="deleteCategory(${c.id})">🗑</button>
+    </div></td>
+  </tr>`).join('');
+}
+
+document.getElementById('addCategoryBtn').onclick = () => editCategory(null);
+
+window.editCategory = function(id) {
+  const c = id ? state.categories.find(x=>x.id===id) : { name:'', slug:'', sort_order:0 };
+  openModal(`
+    <h3>${id?'Изменить':'Новая'} категория</h3>
+    <div class="field"><label>Название</label><input id="cName" value="${esc(c.name)}" placeholder="Роллы"></div>
+    <div class="field"><label>Slug (латиницей)</label><input id="cSlug" value="${esc(c.slug)}" placeholder="rolls"></div>
+    <div class="field"><label>Порядок</label><input id="cOrder" type="number" value="${c.sort_order}"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Отмена</button>
+      <button class="btn btn-primary" onclick="saveCategory(${id||'null'})">Сохранить</button>
+    </div>
+  `);
+};
+
+window.saveCategory = async function(id) {
+  const payload = {
+    name: document.getElementById('cName').value.trim(),
+    slug: document.getElementById('cSlug').value.trim().toLowerCase().replace(/\s+/g,'-'),
+    sort_order: +document.getElementById('cOrder').value || 0,
+  };
+  if (!payload.name || !payload.slug) return toast('Заполните все поля', 1);
+  const { error } = id
+    ? await sb.from('categories').update(payload).eq('id', id)
+    : await sb.from('categories').insert(payload);
+  if (error) return toast('Ошибка: '+error.message, 1);
+  toast('Сохранено');
+  closeModal();
+  loadCategories();
+};
+
+window.deleteCategory = async (id) => {
+  if (!confirm('Удалить категорию?')) return;
+  const { error } = await sb.from('categories').delete().eq('id', id);
+  if (error) return toast('Ошибка: '+error.message, 1);
+  toast('Удалено');
+  loadCategories();
+};
+
+// ═══════════ ПРОМОКОДЫ ═══════════
+function renderPromo() {
+  const tb = document.getElementById('promoBody');
+  if (!state.promo.length) { tb.innerHTML = `<tr><td colspan="5" class="empty">Промокодов нет</td></tr>`; return; }
+  tb.innerHTML = state.promo.map(p => `<tr>
+    <td><b style="color:var(--accent);font-family:'Unbounded'">${esc(p.code)}</b></td>
+    <td>${p.discount_percent}%</td>
+    <td>${p.min_order ? fmtMoney(p.min_order) : '—'}</td>
+    <td>${p.is_active ? '<span class="badge-status done">Активен</span>' : '<span class="badge-status cancel">Выкл</span>'}</td>
+    <td><div class="actions">
+      <button class="icon-btn" onclick="editPromo(${p.id})">✏️</button>
+      <button class="icon-btn danger" onclick="deletePromo(${p.id})">🗑</button>
+    </div></td>
+  </tr>`).join('');
+}
+
+document.getElementById('addPromoBtn').onclick = () => editPromo(null);
+
+window.editPromo = function(id) {
+  const p = id ? state.promo.find(x=>x.id===id) : { code:'', discount_percent:10, min_order:0, is_active:true };
+  openModal(`
+    <h3>${id?'Изменить':'Новый'} промокод</h3>
+    <div class="field"><label>Код</label><input id="prCode" value="${esc(p.code)}" placeholder="ЛАЗАРЕВСКОЕ10" style="text-transform:uppercase"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+      <div class="field"><label>Скидка %</label><input id="prDisc" type="number" value="${p.discount_percent}" min="1" max="100"></div>
+      <div class="field"><label>Мин. заказ ₽</label><input id="prMin" type="number" value="${p.min_order||0}" min="0"></div>
+    </div>
+    <label style="display:flex;align-items:center;gap:10px;cursor:pointer;color:var(--muted);font-size:14px;">
+      <input type="checkbox" id="prActive" ${p.is_active?'checked':''} style="width:auto;"> Активен
+    </label>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Отмена</button>
+      <button class="btn btn-primary" onclick="savePromo(${id||'null'})">Сохранить</button>
+    </div>
+  `);
+};
+
+window.savePromo = async function(id) {
+  const payload = {
+    code: document.getElementById('prCode').value.trim().toUpperCase(),
+    discount_percent: +document.getElementById('prDisc').value || 0,
+    min_order: +document.getElementById('prMin').value || 0,
+    is_active: document.getElementById('prActive').checked,
+  };
+  if (!payload.code) return toast('Введите код', 1);
+  const { error } = id
+    ? await sb.from('promo_codes').update(payload).eq('id', id)
+    : await sb.from('promo_codes').insert(payload);
+  if (error) return toast('Ошибка: '+error.message, 1);
+  toast('Сохранено');
+  closeModal();
+  loadPromo();
+};
+
+window.deletePromo = async (id) => {
+  if (!confirm('Удалить промокод?')) return;
+  const { error } = await sb.from('promo_codes').delete().eq('id', id);
+  if (error) return toast('Ошибка: '+error.message, 1);
+  loadPromo();
+};
+
+// ═══════════ НАСТРОЙКИ ═══════════
+function renderSettings() {
+  const fields = [
+    ['phone', 'Телефон', 'tel'],
+    ['address', 'Адрес', 'text'],
+    ['work_hours', 'Часы работы', 'text'],
+    ['min_order', 'Минимальный заказ (₽)', 'number'],
+    ['delivery_cost', 'Стоимость доставки (₽)', 'number'],
+    ['free_delivery_from', 'Бесплатная доставка от (₽)', 'number'],
+    ['telegram', 'Telegram (ссылка)', 'text'],
+    ['instagram', 'Instagram (ссылка)', 'text'],
+    ['whatsapp', 'WhatsApp (номер)', 'text'],
+  ];
+  document.getElementById('settingsForm').innerHTML = fields.map(([k,l,t])=>`
+    <div class="field"><label>${l}</label><input id="set_${k}" type="${t}" value="${esc(state.settings[k]||'')}"></div>
+  `).join('');
+}
+
+document.getElementById('saveSettingsBtn').onclick = async () => {
+  const keys = ['phone','address','work_hours','min_order','delivery_cost','free_delivery_from','telegram','instagram','whatsapp'];
+  const rows = keys.map(k => ({ key:k, value: document.getElementById('set_'+k).value }));
+  const { error } = await sb.from('settings').upsert(rows);
+  if (error) return toast('Ошибка: '+error.message, 1);
+  toast('Настройки сохранены');
+  loadSettings();
+};
+
+// ═══════════ MODAL ═══════════
+function openModal(html) {
+  document.getElementById('modalContent').innerHTML = html;
+  document.getElementById('modalOverlay').classList.add('open');
+}
+window.closeModal = () => document.getElementById('modalOverlay').classList.remove('open');
+document.getElementById('modalOverlay').onclick = e => { if (e.target.id==='modalOverlay') closeModal(); };
+
+// ═══════════ СТАРТ ═══════════
+if (SUPABASE_URL.includes('ВСТАВЬТЕ')) {
+  document.getElementById('loginError').innerHTML = '⚠️ Откройте admin.html и впишите SUPABASE_URL и SUPABASE_KEY';
+} else {
+// ═══════════ БАННЕРЫ / АКЦИИ ═══════════
+state.banners = [];
+
+async function loadBanners() {
+  const { data, error } = await sb.from('banners').select('*').order('sort_order');
+  if (error) return toast('Ошибка баннеров: '+error.message, 1);
+  state.banners = data || [];
+  renderBanners();
+}
+
+function renderBanners() {
+  const tb = document.getElementById('bannersBody');
+  if (!tb) return;
+  if (!state.banners.length) {
+    tb.innerHTML = `<tr><td colspan="5" class="empty"><span class="icon">🖼</span>Баннеров нет</td></tr>`;
+    return;
+  }
+  tb.innerHTML = state.banners.map(b => `<tr>
+    <td><img src="${esc(b.image_url)}" style="width:80px;height:44px;border-radius:8px;object-fit:cover;"></td>
+    <td><b>${esc(b.title||'—')}</b><br><small style="color:var(--muted)">${esc(b.subtitle||'')}</small></td>
+    <td class="hide-mobile">${b.link ? `<a href="${esc(b.link)}" target="_blank" style="color:var(--accent);text-decoration:none;">${esc(b.link)}</a>` : '—'}</td>
+    <td>${b.is_active ? '<span class="badge-status done">Активен</span>' : '<span class="badge-status cancel">Скрыт</span>'}</td>
+    <td><div class="actions">
+      <button class="icon-btn" title="Вкл/выкл" onclick="toggleBanner(${b.id}, ${!b.is_active})">${b.is_active?'🚫':'✅'}</button>
+      <button class="icon-btn" onclick="editBanner(${b.id})">✏️</button>
+      <button class="icon-btn danger" onclick="deleteBanner(${b.id})">🗑</button>
+    </div></td>
+  </tr>`).join('');
+}
+
+window.toggleBanner = async (id, active) => {
+  const { error } = await sb.from('banners').update({is_active:active}).eq('id', id);
+  if (error) return toast('Ошибка: '+error.message, 1);
+  toast(active?'Баннер включён':'Баннер скрыт');
+  loadBanners();
+};
+
+window.deleteBanner = async (id) => {
+  if (!confirm('Удалить баннер?')) return;
+  const { error } = await sb.from('banners').delete().eq('id', id);
+  if (error) return toast('Ошибка: '+error.message, 1);
+  toast('Удалено');
+  loadBanners();
+};
+
+document.getElementById('addBannerBtn').onclick = () => editBanner(null);
+
+window.editBanner = function(id) {
+  const b = id ? state.banners.find(x=>x.id===id) : { title:'', subtitle:'', image_url:'', link:'', sort_order:0, is_active:true };
+  openModal(`
+    <h3>${id?'Изменить':'Новый'} баннер</h3>
+    <div class="field">
+      <label>Фото баннера *</label>
+      <div id="bannerPreviewWrap" style="margin-bottom:10px; text-align:center;">
+        ${b.image_url
+          ? `<img src="${esc(b.image_url)}" style="max-width:100%; max-height:180px; border-radius:14px; object-fit:cover;">`
+          : `<div style="height:110px; border-radius:14px; background:rgba(255,255,255,0.03); border:1px dashed rgba(255,255,255,0.15); display:flex; align-items:center; justify-content:center; color:var(--muted); font-size:32px;">🖼</div>`}
+      </div>
+      <input type="file" id="bannerFile" accept="image/*" style="display:none;">
+      <input type="hidden" id="bannerUrl" value="${esc(b.image_url||'')}">
+      <button type="button" class="btn btn-ghost btn-block" onclick="document.getElementById('bannerFile').click()">📷 Загрузить фото</button>
+      <div id="bannerStatus" style="font-size:13px; color:var(--muted); margin-top:8px; min-height:18px;"></div>
+      <p style="font-size:12px; color:var(--muted); margin-top:6px;">Рекомендую: 1400×600 px, JPG или WebP, до 1 МБ</p>
+    </div>
+    <div class="field"><label>Заголовок (необязательно)</label><input id="bTitle" value="${esc(b.title||'')}" placeholder="Скидка 20% на все сеты"></div>
+    <div class="field"><label>Подзаголовок</label><input id="bSubtitle" value="${esc(b.subtitle||'')}" placeholder="Только до конца недели"></div>
+    <div class="field"><label>Ссылка (куда вести при клике)</label><input id="bLink" value="${esc(b.link||'')}" placeholder="#menu или https://..."></div>
+    <div class="field"><label>Порядок</label><input id="bOrder" type="number" value="${b.sort_order||0}"></div>
+    <label style="display:flex;align-items:center;gap:10px;cursor:pointer;color:var(--muted);font-size:14px;">
+      <input type="checkbox" id="bActive" ${b.is_active?'checked':''} style="width:auto;"> Показывать на сайте
+    </label>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Отмена</button>
+      <button class="btn btn-primary" onclick="saveBanner(${id||'null'})">Сохранить</button>
+    </div>
+  `);
+
+  document.getElementById('bannerFile').onchange = async function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const status = document.getElementById('bannerStatus');
+    status.textContent = 'Загрузка...';
+    status.style.color = 'var(--muted)';
+
+    if (file.size > 5 * 1024 * 1024) {
+      status.textContent = '❌ Файл больше 5 МБ';
+      status.style.color = '#ef4444';
+      return;
+    }
+
+    const ext = file.name.split('.').pop().toLowerCase();
+    const fileName = `banner-${Date.now()}-${Math.random().toString(36).slice(2,8)}.${ext}`;
+
+    const { error } = await sb.storage.from('promo-images').upload(fileName, file, { cacheControl:'3600', upsert:false });
+    if (error) {
+      status.textContent = '❌ Ошибка: ' + error.message;
+      status.style.color = '#ef4444';
+      return;
+    }
+
+    const { data: urlData } = sb.storage.from('promo-images').getPublicUrl(fileName);
+    document.getElementById('bannerUrl').value = urlData.publicUrl;
+    document.getElementById('bannerPreviewWrap').innerHTML = `<img src="${urlData.publicUrl}" style="max-width:100%; max-height:180px; border-radius:14px; object-fit:cover;">`;
+    status.textContent = '✅ Фото загружено';
+    status.style.color = '#4ade80';
+  };
+};
+
+window.saveBanner = async function(id) {
+  const payload = {
+    title: document.getElementById('bTitle').value.trim() || null,
+    subtitle: document.getElementById('bSubtitle').value.trim() || null,
+    link: document.getElementById('bLink').value.trim() || null,
+    image_url: document.getElementById('bannerUrl').value,
+    sort_order: +document.getElementById('bOrder').value || 0,
+    is_active: document.getElementById('bActive').checked,
+  };
+  if (!payload.image_url) return toast('Загрузите фото', 1);
+  const { error } = id
+    ? await sb.from('banners').update(payload).eq('id', id)
+    : await sb.from('banners').insert(payload);
+  if (error) return toast('Ошибка: '+error.message, 1);
+  toast(id?'Баннер обновлён':'Баннер добавлен');
+  closeModal();
+  loadBanners();
+};
+  checkSession();
+}
+</script>
+</body>
+</html>
